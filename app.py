@@ -3,29 +3,33 @@ import requests
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 import logging
 from datetime import datetime
-import time
 from threading import Thread
+import time
+import random
 
 # ڕێکخستنی لاگ
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO
 )
-
 logger = logging.getLogger(__name__)
 
-# وەرگرتنی تووکن
-BOT_TOKEN = os.environ.get('BOT_TOKEN')
+# تووکنی بۆت
+BOT_TOKEN = "تووکنەکەت_لێرە_بڕە"  # 👈 تووکنی بۆت لە @BotFather
 DOLLAR_TO_DINAR = 1450
 
 class GoldPriceBot:
     def __init__(self):
+        if not BOT_TOKEN or BOT_TOKEN == "تووکنەکەت_لێرە_بڕە":
+            logger.error("❌ تووکنی بۆت دانەندراوە! تکایە تووکنەکەت لە @BotFather وەربگرە و لێرەدا بڕە")
+            return
+            
         self.updater = Updater(BOT_TOKEN, use_context=True)
         self.dispatcher = self.updater.dispatcher
         self.subscribed_users = set()
         
         self.setup_handlers()
-        logger.info("🤖 بۆتی نرخی زێر دەست بە کار دەکات...")
+        logger.info("✅ بۆتی نرخی زێر دەست بە کار دەکات لە CodeAnywhere...")
     
     def setup_handlers(self):
         self.dispatcher.add_handler(CommandHandler("start", self.start))
@@ -39,9 +43,8 @@ class GoldPriceBot:
     def get_gold_prices_from_api(self):
         try:
             # نرخی نمونەیی - دواتر دەتوانیت API ڕاستی زیاد بکەیت
-            import random
             base_price = 1950.75
-            change = random.uniform(-20, 20)
+            change = random.uniform(-25, 25)
             
             return {
                 'ounce_usd': round(base_price + change, 2),
@@ -106,37 +109,38 @@ class GoldPriceBot:
         welcome_text = f"""
 سڵاو {user.first_name}! 👋
 
-من بۆتی نرخی زێرم.
+من بۆتی نرخی زێرم. دەتوانم یارمەتیت بدەم لە زانینی نرخی زێر.
 
 **فەرمانەکان:**
+/start - دەستپێکردن
 /price - نرخی ئێستای زێر
 /subscribe - بەشداریکردن
-/unsubscribe - کۆتایی بە بەشداری
+/unsubscribe - کۆتایی هێنان بە بەشداری
 /setdollar - گۆڕینی نرخی دۆلار
 
-🔄 نرخەکان هەر جارێک دەتوانیت بە /price وەریبگریت
+📊 نرخەکان بە دۆلار و دیناری عێراقی
         """
         update.message.reply_text(welcome_text)
-        logger.info(f"بەکارهێنەری نوێ: {user.first_name}")
+        logger.info(f"👤 بەکارهێنەری نوێ: {user.first_name}")
     
     def get_gold_price(self, update, context):
         gold_data = self.get_gold_prices_from_api()
         message = self.format_price_message(gold_data)
         update.message.reply_text(message, parse_mode='Markdown')
-        logger.info(f"نرخ نێردرا بۆ: {update.effective_user.id}")
+        logger.info(f"📊 نرخ نێردرا بۆ: {update.effective_user.id}")
     
     def subscribe(self, update, context):
         user_id = update.effective_user.id
         self.subscribed_users.add(user_id)
         update.message.reply_text("✅ بەشداریت کراوە! بە /price نرخەکان وەربگرە")
-        logger.info(f"بەشداربووی نوێ: {user_id}")
+        logger.info(f"✅ بەشداربووی نوێ: {user_id}")
     
     def unsubscribe(self, update, context):
         user_id = update.effective_user.id
         if user_id in self.subscribed_users:
             self.subscribed_users.remove(user_id)
         update.message.reply_text("❌ بەشداریت هەڵوەشێنرایەوە.")
-        logger.info(f"بەشداربوو لابردرا: {user_id}")
+        logger.info(f"❌ بەشداربوو لابردرا: {user_id}")
     
     def set_dollar_rate(self, update, context):
         if context.args:
@@ -144,7 +148,7 @@ class GoldPriceBot:
                 global DOLLAR_TO_DINAR
                 DOLLAR_TO_DINAR = float(context.args[0])
                 update.message.reply_text(f"✅ نرخی دۆلار گۆڕدرا بۆ: {DOLLAR_TO_DINAR:,.0f} دینار")
-                logger.info(f"نرخی دۆلار گۆڕدرا بۆ: {DOLLAR_TO_DINAR}")
+                logger.info(f"💰 نرخی دۆلار گۆڕدرا بۆ: {DOLLAR_TO_DINAR}")
             except ValueError:
                 update.message.reply_text("❌ تکایە نرخی دروست بنووسە (نموونە: /setdollar 1450)")
         else:
@@ -155,16 +159,13 @@ class GoldPriceBot:
         if any(word in text for word in ["زێر", "نرخ", "gold", "price"]):
             self.get_gold_price(update, context)
         else:
-            update.message.reply_text("🤔 تکایە /start بەکاربێنە بۆ زانینی فەرمانەکان.")
+            update.message.reply_text("🤔 نازانم چی دەڵێیت. تکایە /start بەکاربێنە بۆ زانینی فەرمانەکان.")
     
     def run(self):
         self.updater.start_polling()
-        logger.info("✅ بۆت بە سەرکەوتوویی دەستیپێکرد")
+        logger.info("🎉 بۆت بە سەرکەوتوویی دەستیپێکرد!")
         self.updater.idle()
 
 if __name__ == "__main__":
-    if BOT_TOKEN:
-        bot = GoldPriceBot()
-        bot.run()
-    else:
-        logger.error("❌ تووکنی بۆت دەست نەکەوت!")
+    bot = GoldPriceBot()
+    bot.run()
